@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UI Interaction Lab</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --font: "Inter", -apple-system, sans-serif;
+        --mono: "SF Mono", ui-monospace, "Cascadia Code", monospace;
+        --blue: #007aff;
+        --green: #34c759;
+        --border: rgba(0, 0, 0, 0.08);
+      }
+
+      html,
+      body {
+        background: #fff;
+        color: #000;
+        font-family: var(--mono);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+
+      /* ── DESKTOP NOTICE ── */
+      #desktop-notice {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: #fff;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        text-align: center;
+      }
+      #desktop-notice h2 {
+        font-size: 14px;
+        font-weight: 500;
+        color: #111;
+        font-family: var(--mono);
+      }
+      #desktop-notice p {
+        font-size: 13px;
+        color: #888;
+        font-family: var(--mono);
+      }
+
+      /* ── LAYOUT ── */
+      .page {
+        width: 100%; /* 1440px → 100% */
+        min-height: 100vh;
+        position: relative;
+        padding-bottom: 80px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ── HEADER ── */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 40px 40px;
+        line-height: 42px;
+      }
+      .logo {
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 24px;
+        color: #000;
+        white-space: nowrap;
+      }
+      .tagline {
+        font-family: var(--mono);
+        font-weight: 400;
+        font-size: 14px;
+        color: #000;
+        white-space: nowrap;
+      }
+
+      /* ── CARD GRID ── */
+      .row1 {
+        /* position: absolute; left: 87px; top: 161px; ← 이 두 줄 삭제 */
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 30px;
+        padding: 0 40px;
+        margin-top: 40px;
+      }
+      .row2 {
+        /* position: absolute; left: 269px; top: 655px; ← 이 두 줄 삭제 */
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 30px;
+        padding: 0 40px;
+        margin-top: 30px;
+      }
+      /* ── CARD ── */
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        cursor: pointer;
+        flex-shrink: 0;
+        flex: 1; /* ← 추가: 카드가 공간 균등하게 차지 */
+      }
+
+      .card-img {
+        border-radius: 10px;
+        overflow: hidden;
+        transition: opacity 0.2s;
+        display: block;
+      }
+      .card:hover .card-img {
+        opacity: 0.85;
+      }
+      .card-img img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 10px;
+      }
+      .card-label {
+        font-family: var(--mono);
+        font-size: 14px;
+        font-weight: 400;
+        color: #000;
+        line-height: 18px;
+      }
+
+      /* row1 cards */
+      .row1 .card-img {
+        width: 100%; /* 고정 px 제거 */
+        aspect-ratio: 1 / 1; /* 비율 유지 */
+      }
+
+      /* row2 cards */
+      .row2 .card-img {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+      }
+      .row2 .card {
+        flex: 0 0 auto; /* row2는 늘어나지 않게 */
+        width: calc((100% - 80px - 30px) / 2); /* 양쪽 패딩 + gap 고려 */
+        max-width: 500px;
+      }
+      .row2 .card:last-child .card-img {
+        border-radius: 0;
+      }
+      /* 각 카드가 동등하게 공간 차지 */
+      .card {
+        flex: 1;
+      }
+      /* ── FOOTER ── */
+      .credit {
+        position: absolute;
+        bottom: 40px;
+        right: 40px;
+        font-family: var(--mono);
+        font-size: 16px;
+        color: #000;
+        line-height: 42px;
+      }
+
+      /* ── OVERLAY ── */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0);
+        pointer-events: none;
+        transition: background 0.35s;
+      }
+      .overlay.open {
+        background: rgba(0, 0, 0, 0.3);
+        pointer-events: all;
+      }
+
+      /* ── BOTTOM SHEET ── */
+      .sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 101;
+        background: #fff;
+        border-radius: 28px 28px 0 0;
+        box-shadow: 0 -8px 60px rgba(0, 0, 0, 0.14);
+        transform: translateY(100%);
+        transition: transform 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+        max-height: 88vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .sheet.open {
+        transform: translateY(0);
+      }
+      .sheet-bar {
+        width: 40px;
+        height: 5px;
+        background: #e0e0e0;
+        border-radius: 3px;
+        margin: 14px auto 0;
+        flex-shrink: 0;
+      }
+      .sheet-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 32px 0;
+        flex-shrink: 0;
+      }
+      .sheet-title {
+        font-family: var(--mono);
+        font-size: 20px;
+        font-weight: 600;
+        color: #000;
+      }
+      .sheet-close {
+        width: 34px;
+        height: 34px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        color: #aaa;
+        transition: color 0.15s;
+        font-family: var(--font);
+      }
+      .sheet-close:hover {
+        color: #555;
+      }
+      .sheet-body {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 40px 32px 60px;
+        min-height: 300px;
+      }
+
+      .comp-panel {
+        display: none;
+        width: 100%;
+        justify-content: center;
+        align-items: center;
+      }
+      .comp-panel.active {
+        display: flex;
+      }
+
+      /* ── UPLOAD BUTTON ── */
+      .upload-btn {
+        position: relative;
+        width: 160px;
+        height: 56px;
+        background: var(--blue);
+        border: none;
+        border-radius: 100px;
+        cursor: pointer;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: background-color 0.5s;
+        outline: none;
+      }
+      .u-text-layer,
+      .u-done-section {
+        color: #fff !important;
+        font-size: 18px;
+        font-weight: 600;
+        pointer-events: none;
+        letter-spacing: -0.01em;
+        font-family: var(--font);
+      }
+      .u-text-layer {
+        display: flex;
+        position: absolute;
+      }
+      .uchar {
+        display: inline-block;
+        transition: transform 0.4s ease, opacity 0.3s;
+        backface-visibility: hidden;
+      }
+      .uslide-out {
+        transform: translateX(80px);
+        opacity: 0;
+      }
+      .u-dots {
+        position: absolute;
+        display: none;
+        gap: 6px;
+      }
+      .udot {
+        width: 6px;
+        height: 6px;
+        background: white;
+        border-radius: 50%;
+      }
+      @keyframes ubounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+      .udot.animate {
+        animation: ubounce 0.6s infinite ease-in-out;
+      }
+      .u-done-section {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+      }
+      .ucheckmark {
+        width: 20px;
+        height: 20px;
+        stroke-dasharray: 50;
+        stroke-dashoffset: 50;
+        stroke-width: 3.5;
+        stroke: #fff;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex-shrink: 0;
+      }
+      @keyframes udrawCheck {
+        to {
+          stroke-dashoffset: 0;
+        }
+      }
+      @keyframes udropIn {
+        0% {
+          transform: translateY(-30px);
+          opacity: 0;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .udone-char {
+        display: inline-block;
+        opacity: 0;
+        color: #fff;
+        backface-visibility: hidden;
+      }
+      .u-active .ucheckmark {
+        animation: udrawCheck 0.4s ease-out forwards;
+      }
+      .u-active .udone-char {
+        animation: udropIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+
+      /* ── STEPPER ── */
+      .stepper-wrap {
+        display: flex;
+        align-items: center;
+        gap: 52px;
+      }
+      @keyframes bubblePop {
+        0% {
+          opacity: 0;
+          transform: scale(0);
+        }
+        60% {
+          opacity: 1;
+          transform: scale(1.15);
+        }
+        80% {
+          transform: scale(0.9);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      .pop-it {
+        opacity: 0;
+        animation: bubblePop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+      .pop-it:nth-child(1) {
+        animation-delay: 0.1s;
+      }
+      .pop-it:nth-child(2) {
+        animation-delay: 0.3s;
+      }
+      .pop-it:nth-child(3) {
+        animation-delay: 0.5s;
+      }
+      .s-btn {
+        display: flex;
+        width: 185.25px;
+        height: 185.25px;
+        justify-content: center;
+        align-items: center;
+        background: #f1f0f0;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 0 6px 0 rgba(0, 0, 0, 0.07);
+        cursor: pointer;
+        outline: none;
+        flex-shrink: 0;
+        transition: transform 0.1s ease;
+      }
+      .s-btn:active {
+        transform: scale(0.92) !important;
+      }
+      .s-btn img {
+        width: 78px;
+        height: 78px;
+        user-select: none;
+      }
+      .s-numbox {
+        position: relative;
+        display: flex;
+        width: 440px;
+        height: 260px;
+        justify-content: center;
+        align-items: center;
+        background: #f1f0f0;
+        border-radius: 200px;
+        box-shadow: inset 0 14px 10px 0 rgba(0, 0, 0, 0.25);
+        box-sizing: border-box;
+        border: 2.1px solid #fff;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      .s-numbox::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 80px;
+        z-index: 5;
+        pointer-events: none;
+        background: linear-gradient(
+          to bottom,
+          rgba(241, 240, 240, 0.8) 0%,
+          rgba(241, 240, 240, 0) 100%
+        );
+      }
+      .s-numbox::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 80px;
+        z-index: 5;
+        pointer-events: none;
+        background: linear-gradient(
+          to top,
+          rgba(241, 240, 240, 0.8) 0%,
+          rgba(241, 240, 240, 0) 100%
+        );
+      }
+      .s-digits {
+        display: flex;
+        height: 100%;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+      }
+      .s-viewport {
+        height: 260px;
+        overflow: hidden;
+      }
+      .s-strip {
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .s-numtext {
+        height: 260px;
+        min-width: 85px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #535353;
+        font-size: 130px;
+        font-weight: 400;
+        letter-spacing: -2.21px;
+        user-select: none;
+        font-family: "Inter", sans-serif;
+      }
+      /* stepper panel background */
+      #panel-stepper {
+        background: #fff;
+        border-radius: 20px;
+        padding: 60px 40px;
+      }
+      #panel-stepper .stepper-wrap {
+        transform: scale(0.75);
+        transform-origin: center center;
+      }
+
+      /* ── TOOLBAR ── */
+      .toolbar-stage {
+        position: relative;
+        width: 600px;
+        height: 380px;
+        background: #f0f0f0;
+        border-radius: 20px;
+        overflow: visible;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+      }
+      .toolbar-stage::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image: radial-gradient(
+          circle,
+          rgba(0, 0, 0, 0.06) 1px,
+          transparent 1px
+        );
+        background-size: 24px 24px;
+      }
+      .t-bar {
+        position: absolute;
+        width: 100px;
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 18px;
+        padding-bottom: 14px;
+        user-select: none;
+        touch-action: none;
+        transition: width 0.3s, height 0.3s;
+        cursor: move;
+        overflow: hidden;
+      }
+      .t-bar.grid-mode {
+        width: 276px;
+        height: 212px;
+        padding: 14px;
+      }
+      .t-handle {
+        width: 38px;
+        height: 6px;
+        background: #e0e0e0;
+        border-radius: 3px;
+        cursor: grab;
+        margin-bottom: 12px;
+        flex-shrink: 0;
+        transition: width 0.3s;
+      }
+      .t-bar.grid-mode .t-handle {
+        width: 60px;
+      }
+      .t-icons {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .t-bar.grid-mode .t-icons {
+        display: grid;
+        grid-template-columns: repeat(3, 76px);
+        column-gap: 10px;
+        row-gap: 10px;
+      }
+      .t-icon {
+        width: 76px;
+        height: 76px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        border-radius: 12px;
+        transition: background 0.2s;
+        flex-shrink: 0;
+      }
+      .t-bar.grid-mode .t-icon {
+        margin-bottom: 0;
+      }
+      .t-icon:hover {
+        background: #f8f8f8;
+      }
+      .t-icon img {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+      }
+      .t-icon.sel img {
+        width: 47px;
+        height: 47px;
+      }
+      .t-icon.pen img {
+        width: 46px;
+        height: 46px;
+      }
+      .t-icon:last-child {
+        margin-bottom: 0;
+      }
+      #panel-toolbar .toolbar-stage {
+        transform: scale(0.75);
+        transform-origin: center center;
+        background: transparent;
+        border: none;
+      }
+      #panel-toolbar .toolbar-stage::before {
+        display: none;
+      }
+      .stage-hint {
+        position: absolute;
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: var(--mono);
+        font-size: 10px;
+        color: #aaa;
+        white-space: nowrap;
+      }
+
+      /* ── DATE EDITOR ── */
+      .date-wrap {
+        background: #f2f2f7;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 640px;
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+      }
+      .de-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+          sans-serif;
+      }
+      .de-display {
+        display: flex;
+        align-items: center;
+        background: #fff;
+        border-radius: 14px;
+        padding: 14px 20px;
+        cursor: default;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-origin: left center;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .de-display.hidden {
+        opacity: 0;
+        transform: scale(0.92);
+        pointer-events: none;
+        position: absolute;
+        width: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      .de-num {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1c1c1e;
+        letter-spacing: -0.5px;
+      }
+      .de-sep {
+        font-size: 22px;
+        color: #c7c7cc;
+        margin: 0 6px;
+      }
+      .de-edit-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 6px;
+        margin-left: 6px;
+        border-radius: 8px;
+        transition: background 0.15s;
+        display: flex;
+        align-items: center;
+      }
+      .de-edit-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+      .de-edit-btn svg {
+        width: 24px;
+        height: 24px;
+        fill: #8e8e93;
+      }
+      .de-fields {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.92);
+        transition: opacity 0.35s, transform 0.35s;
+        position: absolute;
+      }
+      .de-fields.visible {
+        opacity: 1;
+        pointer-events: all;
+        transform: scale(1);
+        position: relative;
+      }
+      @keyframes blockIn {
+        from {
+          opacity: 0;
+          transform: scale(0.85) translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+      .de-block {
+        background: #fff;
+        border-radius: 14px;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        animation: blockIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        position: relative;
+      }
+      .de-block:nth-child(1) {
+        animation-delay: 0s;
+      }
+      .de-block:nth-child(2) {
+        animation-delay: 0.05s;
+      }
+      .de-block:nth-child(3) {
+        animation-delay: 0.1s;
+      }
+      .de-block input {
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 22px;
+        font-weight: 700;
+        color: #1c1c1e;
+        letter-spacing: -0.5px;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+          sans-serif;
+        caret-color: #007aff;
+        -webkit-appearance: none;
+      }
+      #de-day {
+        width: 30px;
+        text-align: center;
+      }
+      #de-year {
+        width: 54px;
+        text-align: center;
+      }
+      .de-month-btn {
+        background: none;
+        border: none;
+        font-size: 22px;
+        font-weight: 700;
+        color: #1c1c1e;
+        letter-spacing: -0.5px;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+          sans-serif;
+        cursor: pointer;
+        padding: 0;
+        outline: none;
+        white-space: nowrap;
+      }
+      .de-dropdown {
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 50%;
+        transform: translateX(-50%) scale(0.92);
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+        overflow: hidden;
+        z-index: 200;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s, transform 0.2s;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        width: 198px;
+      }
+      .de-dropdown.open {
+        opacity: 1;
+        pointer-events: all;
+        transform: translateX(-50%) scale(1);
+      }
+      .de-mopt {
+        padding: 12px 0;
+        font-size: 16px;
+        font-weight: 500;
+        color: #1c1c1e;
+        cursor: pointer;
+        transition: background 0.1s;
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      .de-mopt:hover {
+        background: #f2f2f7;
+      }
+      .de-mopt.active {
+        color: #007aff;
+        font-weight: 700;
+      }
+      .de-mopt:nth-child(n + 4) {
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+      }
+      .de-mopt:not(:nth-child(3n)) {
+        border-right: 1px solid rgba(0, 0, 0, 0.06);
+      }
+      .de-confirm {
+        background: #fff;
+        border: none;
+        border-radius: 14px;
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: background 0.15s, transform 0.1s;
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.85);
+      }
+      .de-confirm.visible {
+        opacity: 1;
+        pointer-events: all;
+        transform: scale(1);
+        animation: blockIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+      }
+      .de-confirm svg {
+        width: 20px;
+        height: 20px;
+        stroke: #3a3a3c;
+        stroke-width: 2.5;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* ── TIME TIMER ── */
+      .timer-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+      .tt-hint {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: #888;
+        text-align: center;
+        line-height: 1.6;
+      }
+      .tt-outer {
+        width: 440px;
+        height: 440px;
+        background: #e8e8e8;
+        border-radius: 78px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .tt-inner {
+        width: 412px;
+        height: 412px;
+        background: #e8e8e8;
+        border-radius: 72px;
+        box-shadow: inset 6px 6px 16px #b2b2b2, inset -6px -6px 16px #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      .tt-reddot {
+        position: absolute;
+        top: 48px;
+        right: 48px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: transparent;
+        box-shadow: inset 2px 2px 4px #b2b2b2, inset -2px -2px 4px #fff;
+        transition: background 0.25s, box-shadow 0.25s;
+      }
+      .tt-reddot.on {
+        background: #e82020;
+        box-shadow: 0 0 8px rgba(232, 32, 32, 0.55);
+      }
+      #tt-svg {
+        display: block;
+        user-select: none;
+        touch-action: none;
+        cursor: default;
+      }
+      .tt-time {
+        font-size: 32px;
+        font-weight: 300;
+        color: #333;
+        letter-spacing: 4px;
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="desktop-notice">
+      <h2>BEST VIEWED ON DESKTOP</h2>
+      <p>Please open it on a desktop or laptop for the full experience.</p>
+    </div>
+
+    <div class="page">
+      <!-- HEADER -->
+      <header>
+        <span class="logo">UI Interaction Lab</span>
+        <span class="tagline">Click a card to try it</span>
+      </header>
+
+      <!-- ROW 1: Rolling Stepper, Timer, Date Editor -->
+      <div class="row1">
+        <div class="card" onclick="openSheet('stepper')">
+          <div class="card-img">
+            <!-- ✅ [카드 썸네일] Rolling Stepper 비디오
+             <img> 태그를 아래 <video> 태그로 교체하세요:
+             <video src="YOUR_VIDEO.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:10px;"></video> -->
+            <img src="button.mp4" alt="Rolling Stepper" />
+          </div>
+          <span class="card-label">Rolling Stepper</span>
+        </div>
+        <div class="card" onclick="openSheet('timer')">
+          <div class="card-img">
+            <!-- ✅ [카드 썸네일] Timer 비디오
+             <img> 태그를 아래 <video> 태그로 교체하세요:
+             <video src="YOUR_VIDEO.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:10px;"></video> -->
+            <img src="Timer.mp4" alt="Timer" />
+          </div>
+          <span class="card-label">Timer</span>
+        </div>
+        <div class="card" onclick="openSheet('date')">
+          <div class="card-img">
+            <!-- ✅ [카드 썸네일] Date Editor 비디오
+             <img> 태그를 아래 <video> 태그로 교체하세요:
+             <video src="YOUR_VIDEO.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:10px;"></video> -->
+            <img src="date.mp4" alt="Date Editor" />
+          </div>
+          <span class="card-label">Date Editor</span>
+        </div>
+      </div>
+
+      <!-- ROW 2: Toolbar, Upload Button -->
+      <div class="row2">
+        <div class="card" onclick="openSheet('toolbar')">
+          <div class="card-img">
+            <!-- ✅ [카드 썸네일] Toolbar 비디오
+             <img> 태그를 아래 <video> 태그로 교체하세요:
+             <video src="YOUR_VIDEO.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:10px;"></video> -->
+            <img src="Tools.mp4" alt="Toolbar" />
+          </div>
+          <span class="card-label">Toolbar</span>
+        </div>
+        <div class="card" onclick="openSheet('upload')">
+          <div class="card-img">
+            <!-- ✅ [카드 썸네일] Upload Button 비디오
+             <img> 태그를 아래 <video> 태그로 교체하세요:
+             <video src="YOUR_VIDEO.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video> -->
+            <img
+              src="upload.mp4"
+              alt="Upload Button"
+              style="border-radius: 10"
+            />
+          </div>
+          <span class="card-label">Upload Button</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY -->
+    <div class="overlay" id="overlay" onclick="closeSheet()"></div>
+
+    <!-- BOTTOM SHEET -->
+    <div class="sheet" id="sheet">
+      <div class="sheet-bar"></div>
+      <div class="sheet-header">
+        <div class="sheet-title" id="sheet-title"></div>
+        <button class="sheet-close" onclick="closeSheet()">✕</button>
+      </div>
+      <div class="sheet-body">
+        <!-- Upload -->
+        <div class="comp-panel" id="panel-upload">
+          <button id="upload-btn" class="upload-btn">
+            <div class="u-text-layer" id="u-textbox"></div>
+            <div class="u-dots" id="u-dots">
+              <div class="udot"></div>
+              <div class="udot"></div>
+              <div class="udot"></div>
+            </div>
+            <div class="u-done-section" id="u-done">
+              <svg class="ucheckmark" viewBox="0 0 24 24">
+                <polyline points="4 12 9 17 20 6"></polyline>
+              </svg>
+              <div id="u-donebox" style="display: flex"></div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Stepper -->
+        <div class="comp-panel" id="panel-stepper">
+          <div class="stepper-wrap">
+            <!-- ✅ [Rolling Stepper] − 버튼 이미지
+             src="data:image/png;base64,..." 부분을 이미지 파일 경로로 교체:
+             예) src="minus.png" 또는 src="assets/remove.png" -->
+            <button class="s-btn pop-it" id="s-dec">
+              <img src="remove.png" alt="−" />
+            </button>
+            <div class="s-numbox pop-it">
+              <div class="s-digits" id="s-digits"></div>
+            </div>
+            <!-- ✅ [Rolling Stepper] + 버튼 이미지
+             src="data:image/png;base64,..." 부분을 이미지 파일 경로로 교체:
+             예) src="plus.png" 또는 src="assets/add.png" -->
+            <button class="s-btn pop-it" id="s-inc">
+              <img src="add.png" alt="+" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="comp-panel" id="panel-toolbar">
+          <div class="toolbar-stage" id="t-stage">
+            <div class="t-bar" id="t-bar" ondblclick="toggleTBar(event)">
+              <div class="t-handle" id="t-handle"></div>
+              <ul class="t-icons">
+                <!-- ✅ [Toolbar] 아이콘 1 (선택 도구 / Select)
+                 src="data:image/png;base64,..." 를 이미지 파일 경로로 교체:
+                 예) src="icons/select.png" -->
+                <li class="t-icon sel">
+                  <img src="icon1.png" alt="icon1" />
+                </li>
+                <!-- ✅ [Toolbar] 아이콘 2
+                 src="data:image/png;base64,..." 를 이미지 파일 경로로 교체:
+                 예) src="icons/icon2.png" -->
+                <li class="t-icon">
+                  <img src="icon2.png" alt="icon2" />
+                </li>
+                <!-- ✅ [Toolbar] 아이콘 3
+                 예) src="icons/icon3.png" -->
+                <li class="t-icon">
+                  <img src="icon3.png" alt="icon3" />
+                </li>
+                <!-- ✅ [Toolbar] 아이콘 4
+                 예) src="icons/icon4.png" -->
+                <li class="t-icon">
+                  <img src="icon4.png" alt="icon4" />
+                </li>
+                <!-- ✅ [Toolbar] 아이콘 5
+                 예) src="icons/icon5.png" -->
+                <li class="t-icon">
+                  <img src="icon5.png" alt="icon5" />
+                </li>
+                <!-- ✅ [Toolbar] 아이콘 6 (펜 도구 / Pen)
+                 예) src="icons/pen.png" -->
+                <li class="t-icon pen">
+                  <img src="icon6.png" alt="icon6" />
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Date Editor -->
+        <div class="comp-panel" id="panel-date">
+          <div class="date-wrap">
+            <div class="de-wrapper">
+              <div class="de-display" id="de-display">
+                <span class="de-num" id="de-vday">09</span>
+                <span class="de-sep">·</span>
+                <span class="de-num" id="de-vmonth">Mar</span>
+                <span class="de-sep">·</span>
+                <span class="de-num" id="de-vyear">2026</span>
+                <button class="de-edit-btn" id="de-edit-btn">
+                  <svg viewBox="0 0 24 24">
+                    <path
+                      d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div class="de-fields" id="de-fields">
+                <div class="de-block">
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    id="de-day"
+                    maxlength="2"
+                    value="09"
+                  />
+                </div>
+                <div class="de-block" id="de-mblock">
+                  <button class="de-month-btn" id="de-mbtn">Mar</button>
+                  <div class="de-dropdown" id="de-dropdown"></div>
+                </div>
+                <div class="de-block">
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    id="de-year"
+                    maxlength="4"
+                    value="2026"
+                  />
+                </div>
+              </div>
+              <button class="de-confirm" id="de-confirm">
+                <svg viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time Timer -->
+        <div class="comp-panel" id="panel-timer">
+          <div class="timer-wrap">
+            <div class="tt-outer">
+              <div class="tt-inner">
+                <div class="tt-reddot" id="tt-reddot"></div>
+                <svg
+                  id="tt-svg"
+                  width="412"
+                  height="412"
+                  viewBox="0 0 500 500"
+                ></svg>
+              </div>
+            </div>
+            <div class="tt-time" id="tt-time">00 : 00</div>
+            <div class="tt-hint">
+              Drag to set time — starts automatically<br />Click the center knob
+              to pause / resume
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* SHEET */
+      const overlay = document.getElementById("overlay");
+      const sheet = document.getElementById("sheet");
+      const sheetTitle = document.getElementById("sheet-title");
+      const titles = {
+        upload: "Upload Button",
+        stepper: "Rolling Stepper",
+        toolbar: "Toolbar",
+        date: "Date Editor",
+        timer: "Time Timer",
+      };
+      let cur = null;
+
+      function openSheet(id) {
+        if (cur)
+          document.getElementById("panel-" + cur).classList.remove("active");
+        cur = id;
+        sheetTitle.textContent = titles[id];
+        document.getElementById("panel-" + id).classList.add("active");
+        overlay.classList.add("open");
+        sheet.classList.add("open");
+        if (id === "upload") initUpload();
+        if (id === "stepper") initStepper();
+        if (id === "toolbar") initToolbar();
+        if (id === "date") initDate();
+        if (id === "timer") initTimer();
+      }
+      function closeSheet() {
+        overlay.classList.remove("open");
+        sheet.classList.remove("open");
+        setTimeout(() => {
+          if (cur) {
+            document.getElementById("panel-" + cur).classList.remove("active");
+            cur = null;
+          }
+        }, 450);
+      }
+
+      /* UPLOAD */
+      let uReady = false;
+      function initUpload() {
+        if (uReady) return;
+        uReady = true;
+        const btn = document.getElementById("upload-btn"),
+          tb = document.getElementById("u-textbox"),
+          dots = document.getElementById("u-dots"),
+          done = document.getElementById("u-done"),
+          db = document.getElementById("u-donebox");
+        function setup() {
+          tb.innerHTML = "";
+          "Upload".split("").forEach((c, i) => {
+            const s = document.createElement("span");
+            s.innerText = c;
+            s.className = "uchar";
+            s.style.transitionDelay = i * 0.05 + "s";
+            tb.appendChild(s);
+          });
+          db.innerHTML = "";
+          "Done".split("").forEach((c, i) => {
+            const s = document.createElement("span");
+            s.innerText = c;
+            s.className = "udone-char";
+            s.style.animationDelay = 0.3 + i * 0.08 + "s";
+            db.appendChild(s);
+          });
+        }
+        setup();
+        btn.addEventListener("click", () => {
+          if (btn.classList.contains("processing")) return;
+          btn.classList.add("processing");
+          tb.querySelectorAll(".uchar").forEach((c) =>
+            c.classList.add("uslide-out")
+          );
+          setTimeout(() => {
+            tb.style.display = "none";
+            dots.style.display = "flex";
+            dots.querySelectorAll(".udot").forEach((d, i) => {
+              d.style.animationDelay = i * 0.15 + "s";
+              d.classList.add("animate");
+            });
+          }, 500);
+          setTimeout(() => {
+            dots.style.display = "none";
+            btn.style.backgroundColor = "var(--green)";
+            done.style.display = "flex";
+            done.classList.add("u-active");
+            setTimeout(() => {
+              btn.classList.remove("processing");
+              btn.style.backgroundColor = "var(--blue)";
+              done.classList.remove("u-active");
+              done.style.display = "none";
+              tb.style.display = "flex";
+              setup();
+            }, 3500);
+          }, 2500);
+        });
+      }
+
+      /* STEPPER */
+      let sCount = 26;
+      const SH = 260;
+      function initStepper() {
+        buildDigits();
+        document.getElementById("s-inc").onclick = () =>
+          moveStepper(sCount + 1);
+        document.getElementById("s-dec").onclick = () =>
+          moveStepper(sCount - 1);
+      }
+      function buildDigits() {
+        document.getElementById("s-digits").innerHTML = String(sCount)
+          .split("")
+          .map(
+            (d, i) =>
+              `<div class="s-viewport"><div class="s-strip" id="sd-${i}"><div class="s-numtext">${d}</div></div></div>`
+          )
+          .join("");
+      }
+      function moveStepper(nv) {
+        if (nv < 0) return;
+        const os = String(sCount),
+          ns = String(nv);
+        if (os.length !== ns.length) {
+          sCount = nv;
+          buildDigits();
+          return;
+        }
+        for (let i = 0; i < ns.length; i++) {
+          if (os[i] !== ns[i]) {
+            const strip = document.getElementById("sd-" + i),
+              up = nv > sCount;
+            if (up) {
+              strip.innerHTML = `<div class="s-numtext">${os[i]}</div><div class="s-numtext">${ns[i]}</div>`;
+              strip.style.transition = "none";
+              strip.style.transform = "translateY(0)";
+              strip.offsetHeight;
+              strip.style.transition =
+                "transform 0.6s cubic-bezier(0.34,1.56,0.64,1)";
+              strip.style.transform = `translateY(-${SH}px)`;
+            } else {
+              strip.innerHTML = `<div class="s-numtext">${ns[i]}</div><div class="s-numtext">${os[i]}</div>`;
+              strip.style.transition = "none";
+              strip.style.transform = `translateY(-${SH}px)`;
+              strip.offsetHeight;
+              strip.style.transition =
+                "transform 0.6s cubic-bezier(0.34,1.56,0.64,1)";
+              strip.style.transform = "translateY(0)";
+            }
+          }
+        }
+        sCount = nv;
+      }
+
+      /* TOOLBAR */
+      let tbReady = false;
+      function initToolbar() {
+        if (tbReady) return;
+        tbReady = true;
+        const stage = document.getElementById("t-stage"),
+          tbar = document.getElementById("t-bar"),
+          th = document.getElementById("t-handle");
+        function center() {
+          tbar.style.left = (stage.offsetWidth - tbar.offsetWidth) / 2 + "px";
+          tbar.style.top = (stage.offsetHeight - tbar.offsetHeight) / 2 + "px";
+        }
+        center();
+        let drag = false,
+          sx,
+          sy,
+          ix,
+          iy;
+        th.addEventListener("mousedown", (e) => {
+          drag = true;
+          sx = e.clientX;
+          sy = e.clientY;
+          ix = tbar.offsetLeft;
+          iy = tbar.offsetTop;
+          e.preventDefault();
+        });
+        window.addEventListener("mousemove", (e) => {
+          if (!drag) return;
+          tbar.style.left = ix + e.clientX - sx + "px";
+          tbar.style.top = iy + e.clientY - sy + "px";
+        });
+        window.addEventListener("mouseup", () => (drag = false));
+        th.addEventListener(
+          "touchstart",
+          (e) => {
+            drag = true;
+            sx = e.touches[0].clientX;
+            sy = e.touches[0].clientY;
+            ix = tbar.offsetLeft;
+            iy = tbar.offsetTop;
+          },
+          { passive: false }
+        );
+        window.addEventListener(
+          "touchmove",
+          (e) => {
+            if (!drag) return;
+            e.preventDefault();
+            tbar.style.left = ix + e.touches[0].clientX - sx + "px";
+            tbar.style.top = iy + e.touches[0].clientY - sy + "px";
+          },
+          { passive: false }
+        );
+        window.addEventListener("touchend", () => (drag = false));
+      }
+      function toggleTBar(e) {
+        if (e.target.closest(".t-icon")) return;
+        document.getElementById("t-bar").classList.toggle("grid-mode");
+      }
+
+      /* DATE EDITOR */
+      let dReady = false;
+      function initDate() {
+        if (dReady) return;
+        dReady = true;
+        const MONTHS = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        let cm = 3;
+        const dd = document.getElementById("de-dropdown");
+        MONTHS.forEach((m, i) => {
+          const div = document.createElement("div");
+          div.className = "de-mopt" + (i + 1 === cm ? " active" : "");
+          div.textContent = m;
+          div.dataset.m = i + 1;
+          div.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            cm = i + 1;
+            document.getElementById("de-mbtn").textContent = m;
+            dd.querySelectorAll(".de-mopt").forEach((el) =>
+              el.classList.toggle("active", +el.dataset.m === cm)
+            );
+            dd.classList.remove("open");
+          });
+          dd.appendChild(div);
+        });
+        document
+          .getElementById("de-mbtn")
+          .addEventListener("click", () => dd.classList.toggle("open"));
+        document.addEventListener("click", (e) => {
+          if (!document.getElementById("de-mblock").contains(e.target))
+            dd.classList.remove("open");
+        });
+        const disp = document.getElementById("de-display"),
+          fields = document.getElementById("de-fields"),
+          conf = document.getElementById("de-confirm"),
+          eb = document.getElementById("de-edit-btn"),
+          iDay = document.getElementById("de-day"),
+          iYear = document.getElementById("de-year"),
+          vD = document.getElementById("de-vday"),
+          vM = document.getElementById("de-vmonth"),
+          vY = document.getElementById("de-vyear");
+        function pad2(n) {
+          return String(n).padStart(2, "0");
+        }
+        function focusEnd(el) {
+          el.focus();
+          setTimeout(
+            () => el.setSelectionRange(el.value.length, el.value.length),
+            0
+          );
+        }
+        function enterEdit() {
+          disp.classList.add("hidden");
+          fields.classList.add("visible");
+          conf.classList.add("visible");
+          fields.querySelectorAll(".de-block").forEach((b) => {
+            b.style.animation = "none";
+            b.offsetHeight;
+            b.style.animation = "";
+          });
+          conf.style.animation = "none";
+          conf.offsetHeight;
+          conf.style.animation = "";
+          setTimeout(() => focusEnd(iDay), 120);
+        }
+        function exitEdit() {
+          dd.classList.remove("open");
+          let y = Math.max(1900, Math.min(2100, parseInt(iYear.value) || 2026));
+          let d = Math.max(
+            1,
+            Math.min(new Date(y, cm, 0).getDate(), parseInt(iDay.value) || 1)
+          );
+          iDay.value = pad2(d);
+          iYear.value = y;
+          vD.textContent = pad2(d);
+          vM.textContent = MONTHS[cm - 1];
+          vY.textContent = y;
+          fields.classList.remove("visible");
+          conf.classList.remove("visible");
+          disp.classList.remove("hidden");
+        }
+        eb.addEventListener("click", enterEdit);
+        conf.addEventListener("click", exitEdit);
+        [iDay, iYear].forEach((inp) => {
+          inp.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              exitEdit();
+              return;
+            }
+            if (
+              [
+                "Backspace",
+                "Delete",
+                "ArrowLeft",
+                "ArrowRight",
+                "Tab",
+              ].includes(e.key)
+            )
+              return;
+            if (!/^\d$/.test(e.key)) e.preventDefault();
+          });
+          inp.addEventListener("focus", () => focusEnd(inp));
+          inp.addEventListener("click", () => focusEnd(inp));
+        });
+      }
+
+      /* TIME TIMER */
+      let ttReady = false;
+      function initTimer() {
+        if (ttReady) return;
+        ttReady = true;
+        const BG = "#e8e8e8",
+          W = 500,
+          H = 500,
+          CX = 250,
+          CY = 250,
+          SR = 175,
+          TO = 195,
+          TIM = 183,
+          TIN = 188,
+          LR = 215,
+          KR = 38,
+          NS = "http://www.w3.org/2000/svg";
+        let rem = 0,
+          running = false,
+          stopped = false,
+          drag = false,
+          intv = null;
+        const svg = document.getElementById("tt-svg"),
+          rd = document.getElementById("tt-reddot"),
+          td = document.getElementById("tt-time");
+        function pxy(a, r) {
+          const rad = ((a - 90) * Math.PI) / 180;
+          return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
+        }
+        function arc(s, e, r = SR) {
+          if (e >= 359.99)
+            return `M${CX} ${CY - r} A${r} ${r} 0 1 1 ${CX - 0.001} ${CY - r}Z`;
+          const sp = pxy(s, r),
+            ep = pxy(e, r),
+            lg = e - s > 180 ? 1 : 0;
+          return `M${CX} ${CY} L${sp.x} ${sp.y} A${r} ${r} 0 ${lg} 1 ${ep.x} ${ep.y}Z`;
+        }
+        function el(t, a = {}) {
+          const e = document.createElementNS(NS, t);
+          for (const [k, v] of Object.entries(a)) e.setAttribute(k, v);
+          return e;
+        }
+        function ga(ev) {
+          const r = svg.getBoundingClientRect(),
+            cx = ev.touches ? ev.touches[0].clientX : ev.clientX,
+            cy = ev.touches ? ev.touches[0].clientY : ev.clientY,
+            x = ((cx - r.left) / r.width) * W - CX,
+            y = ((cy - r.top) / r.height) * H - CY;
+          let a = (Math.atan2(y, x) * 180) / Math.PI + 90;
+          if (a < 0) a += 360;
+          return a;
+        }
+        function ik(ev) {
+          const r = svg.getBoundingClientRect(),
+            cx = ev.touches ? ev.touches[0].clientX : ev.clientX,
+            cy = ev.touches ? ev.touches[0].clientY : ev.clientY,
+            x = ((cx - r.left) / r.width) * W - CX,
+            y = ((cy - r.top) / r.height) * H - CY;
+          return Math.sqrt(x * x + y * y) <= KR * (W / r.width) * 1.2;
+        }
+        function build() {
+          svg.innerHTML = "";
+          const defs = el("defs"),
+            flt = el("filter", {
+              id: "ttK",
+              x: "-60%",
+              y: "-60%",
+              width: "220%",
+              height: "220%",
+            });
+          flt.appendChild(
+            el("feDropShadow", {
+              dx: "3",
+              dy: "3",
+              stdDeviation: "4",
+              "flood-color": "#b0b0b0",
+              "flood-opacity": "0.9",
+            })
+          );
+          flt.appendChild(
+            el("feDropShadow", {
+              dx: "-3",
+              dy: "-3",
+              stdDeviation: "4",
+              "flood-color": "#fff",
+              "flood-opacity": "1",
+            })
+          );
+          defs.appendChild(flt);
+          svg.appendChild(defs);
+          if (rem > 0)
+            svg.appendChild(
+              el("path", { d: arc(0, rem / 10), fill: "#FFF9B8" })
+            );
+          for (let i = 0; i < 60; i++) {
+            const a = (i / 60) * 360,
+              maj = i % 5 === 0,
+              inn = pxy(a, maj ? TIM : TIN),
+              out = pxy(a, TO);
+            svg.appendChild(
+              el("line", {
+                x1: inn.x,
+                y1: inn.y,
+                x2: out.x,
+                y2: out.y,
+                stroke: maj ? "#888" : "#aaa",
+                "stroke-width": maj ? 2.2 : 1.3,
+                "stroke-linecap": "round",
+              })
+            );
+          }
+          [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].forEach((lb) => {
+            const pos = pxy((lb / 60) * 360, LR);
+            const t = el("text", {
+              x: pos.x,
+              y: pos.y,
+              "text-anchor": "middle",
+              "dominant-baseline": "central",
+              "font-size": 20,
+              "font-weight": 400,
+              "font-family": "'Inter',sans-serif",
+              fill: "#555",
+            });
+            t.textContent = lb;
+            svg.appendChild(t);
+          });
+          if (rem > 0) {
+            const tip = pxy(rem / 10, SR - 2),
+              base = pxy(rem / 10, KR + 5);
+            svg.appendChild(
+              el("line", {
+                x1: base.x,
+                y1: base.y,
+                x2: tip.x,
+                y2: tip.y,
+                stroke: "rgba(255,255,255,0.7)",
+                "stroke-width": 5,
+                "stroke-linecap": "round",
+              })
+            );
+          }
+          svg.appendChild(
+            el("circle", {
+              cx: CX,
+              cy: CY,
+              r: KR,
+              fill: BG,
+              filter: "url(#ttK)",
+              style: "cursor:pointer",
+            })
+          );
+        }
+        function upd() {
+          const m = String(Math.floor(rem / 60)).padStart(2, "0"),
+            s = String(rem % 60).padStart(2, "0");
+          td.textContent = `${m} : ${s}`;
+          rd.classList.toggle("on", stopped);
+        }
+        function render() {
+          build();
+          upd();
+        }
+        function start() {
+          if (intv) clearInterval(intv);
+          intv = setInterval(() => {
+            rem--;
+            if (rem <= 0) {
+              rem = 0;
+              clearInterval(intv);
+              running = false;
+              stopped = true;
+            }
+            render();
+          }, 1000);
+        }
+        function onMove(e) {
+          if (!drag) return;
+          e.preventDefault();
+          const a = ga(e),
+            mins = Math.round((a / 360) * 60),
+            secs = Math.min(60, Math.max(0, mins)) * 60;
+          rem = secs;
+          render();
+        }
+        function onEnd() {
+          if (!drag) return;
+          drag = false;
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onEnd);
+          window.removeEventListener("touchmove", onMove);
+          window.removeEventListener("touchend", onEnd);
+          if (rem > 0) {
+            running = true;
+            stopped = false;
+            start();
+            render();
+          }
+        }
+        svg.addEventListener("mousedown", (e) => {
+          if (ik(e)) return;
+          clearInterval(intv);
+          running = false;
+          stopped = false;
+          drag = true;
+          onMove(e);
+          window.addEventListener("mousemove", onMove);
+          window.addEventListener("mouseup", onEnd);
+        });
+        svg.addEventListener("touchstart", (e) => {
+          if (ik(e)) return;
+          clearInterval(intv);
+          running = false;
+          stopped = false;
+          drag = true;
+          onMove(e);
+          window.addEventListener("touchmove", onMove, { passive: false });
+          window.addEventListener("touchend", onEnd);
+        });
+        svg.addEventListener("click", (e) => {
+          if (!ik(e)) return;
+          if (rem === 0 && !running && !stopped) return;
+          if (running) {
+            clearInterval(intv);
+            running = false;
+            stopped = true;
+          } else {
+            stopped = false;
+            running = true;
+            start();
+          }
+          render();
+        });
+        render();
+      }
+
+      /* DESKTOP NOTICE */
+      const notice = document.getElementById("desktop-notice");
+      function checkWidth() {
+        notice.style.display = window.innerWidth < 900 ? "flex" : "none";
+      }
+      checkWidth();
+      window.addEventListener("resize", checkWidth);
+    </script>
+  </body>
+</html>
